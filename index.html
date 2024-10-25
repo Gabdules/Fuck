@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра Динозаврик - Бег по городу</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #f4f4f4;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="600" height="200"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+
+    // Загрузка изображений
+    const backgroundCityImage = new Image();
+    backgroundCityImage.src = 'img/Backstage.png'; // Путь к изображению фона города
+
+    const playerImage = new Image();
+    playerImage.src = 'img/trex.png'; // Путь к изображению персонажа
+
+    const cactusImage = new Image();
+    cactusImage.src = 'img/cactus.png'; // Путь к изображению кактуса
+
+    // Параметры фона города (параллакс)
+    let backgroundX = 0;
+    const backgroundSpeed = 2; // Скорость движения фона
+
+    // Параметры персонажа
+    const player = {
+        x: 50,
+        y: canvas.height - 50,
+        width: 60,
+        height: 60,
+        dy: 0,
+        gravity: 0.8,
+        jumpForce: -10,
+        isJumping: false,
+        draw() {
+            ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
+        },
+        jump() {
+            if (!this.isJumping) {
+                this.dy = this.jumpForce;
+                this.isJumping = true;
+            }
+        },
+        update() {
+            this.dy += this.gravity;
+            this.y += this.dy;
+
+            if (this.y > canvas.height - this.height) {
+                this.y = canvas.height - this.height;
+                this.dy = 0;
+                this.isJumping = false;
+            }
+
+            this.draw();
+        }
+    };
+
+    // Параметры кактусов
+    const obstacles = [];
+    const obstacleSpawnRate = 1500;
+    const obstacleSpeed = 5;
+
+    function spawnObstacle() {
+        const size = Math.random() * 20 + 15;
+        obstacles.push({
+            x: canvas.width,
+            y: canvas.height - size,
+            width: size,
+            height: size,
+            draw() {
+                ctx.drawImage(cactusImage, this.x, this.y, this.width, this.height);
+            },
+            update() {
+                this.x -= obstacleSpeed;
+                this.draw();
+            }
+        });
+    }
+    let isColliding = false;
+    // Обработка столкновений
+    function checkCollision(player, obs) {
+        const padding = 5;
+
+        return (
+            player.x < obs.x + obs.width - padding &&
+            player.x + player.width > obs.x + padding &&
+            player.y < obs.y + obs.height - padding &&
+            player.y + player.height > obs.y + padding
+        );
+    }
+
+function drawBackground() {
+    // Определяем высоту оригинального изображения фона и смещение для центрирования
+    const backgroundHeight = backgroundCityImage.height;
+    const offsetY = (canvas.height - backgroundHeight) / 2;
+
+    // Рисуем два экземпляра фонового изображения для бесконечного параллакса
+    ctx.drawImage(backgroundCityImage, backgroundX, offsetY, backgroundCityImage.width, backgroundHeight);
+    ctx.drawImage(backgroundCityImage, backgroundX + backgroundCityImage.width, offsetY, backgroundCityImage.width, backgroundHeight);
+
+    // Перемещаем фон для параллакса
+    backgroundX -= backgroundSpeed;
+    if (backgroundX <= -backgroundCityImage.width) {
+        backgroundX = 0; // Сброс координаты фона
+    }
+}
+
+    // Основной игровой цикл
+    let score = 0;
+    let lastSpawnTime = Date.now();
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Рисуем и обновляем фон города
+        drawBackground();
+
+        // Обновление персонажа
+        player.update();
+
+        // Спавн и обновление кактусов
+        const now = Date.now();
+        if (now - lastSpawnTime > obstacleSpawnRate) {
+            spawnObstacle();
+            lastSpawnTime = now;
+        }
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            obs.update();
+
+            // Проверка столкновения
+            if (checkCollision(player, obs)) {
+                if (!isColliding)
+            {
+                alert("Попробуй еще, у тебя получится! Счёт: " + score);
+                isColliding = true;
+                document.location.reload();
+            }
+            else {
+                isColliding = false;
+            }
+            }
+
+            // Удаление кактусов, вышедших за экран
+            if (obs.x + obs.width < 0) {
+                obstacles.splice(i, 1);
+                score++;
+            }
+        }
+
+        // Отображение счета
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#000";
+        ctx.fillText("Счёт: " + score, 20, 30);
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Управление прыжком
+    window.addEventListener("keydown", (e) => {
+        if (e.code === "Space") player.jump();
+    });
+        // Обработка касания экрана для прыжка
+    window.addEventListener("touchstart", (e) => {
+        player.jump();
+        e.preventDefault(); // Предотвращаем дополнительные действия по умолчанию
+    });
+
+    // Запуск игры
+    gameLoop();
+</script>
+
+</body>
+</html>
